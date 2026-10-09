@@ -1,0 +1,25 @@
+# Node
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+*.log
