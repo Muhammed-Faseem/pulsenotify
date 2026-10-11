@@ -42,3 +42,74 @@ jobs:
 
     permissions:
       id-token: write   # needed for OIDC
+      contents: read
+
+    strategy:
+      matrix:
+        service: [api, ws-server, worker, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::967283278916:role/pulsenotify-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tag
+        id: tag
+        run: echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/pulsenotify/${{ matrix.service }}:${{ steps.tag.outputs.IMAGE_TAG }}
+            ${{ env.ECR_REGISTRY }}/pulsenotify/${{ matrix.service }}:latest
+          cache-from: type=registry,ref=${{ env.ECR_REGISTRY }}/pulsenotify/${{ matrix.service }}:latest
+          cache-to: type=inline
+
+  # Open a PR with new image tags — merging it triggers ArgoCD
+  update-manifests:
+    name: Update Manifests
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update image tags in Kubernetes manifests
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        run: |
+          for service in api ws-server worker frontend; do
+            MANIFEST="k8s/base/${service}-deployment.yaml"
+            if [ -f "$MANIFEST" ]; then
+              sed -i "s|${ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/${service}:.*|${ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/${service}:${IMAGE_TAG}|" $MANIFEST
+            fi
+          done
+
+      - name: Open pull request with new image tags
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.MANIFEST_PR_TOKEN }}
+          branch: ci/update-image-tags
+          delete-branch: true
+          add-paths: k8s/
+          commit-message: "ci: update image tags to ${{ github.sha }}"
+          title: "ci: deploy ${{ github.sha }}"
+          body: |
+            Automated image tag update for commit ${{ github.sha }}.
+            Merging this PR makes ArgoCD roll out the new images.
