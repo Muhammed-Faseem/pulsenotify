@@ -20,22 +20,12 @@ metadata:
   name: pulsenotify
   namespace: pulsenotify
   annotations:
-    kubernetes.io/ingress.class: nginx
-    cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    # WebSocket upgrade headers
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_set_header Upgrade $http_upgrade;
-      proxy_set_header Connection "upgrade";
 spec:
-  tls:
-    - hosts:
-        - pulsenotify.yourdomain.com
-      secretName: pulsenotify-tls
+  ingressClassName: nginx
   rules:
-    - host: pulsenotify.yourdomain.com
-      http:
+    - http:
         paths:
           - path: /api
             pathType: Prefix
