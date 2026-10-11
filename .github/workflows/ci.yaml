@@ -3,6 +3,8 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'k8s/**'
   pull_request:
     branches: [main]
 
@@ -40,70 +42,3 @@ jobs:
 
     permissions:
       id-token: write   # needed for OIDC
-      contents: write   # needed to push the image tag update commit
-
-    strategy:
-      matrix:
-        service: [api, ws-server, worker, frontend]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::967283278916:role/pulsenotify-github-actions
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set image tag
-        id: tag
-        run: echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
-
-      - name: Build and push ${{ matrix.service }}
-        uses: docker/build-push-action@v5
-        with:
-          context: ./services/${{ matrix.service }}
-          push: true
-          tags: |
-            ${{ env.ECR_REGISTRY }}/pulsenotify/${{ matrix.service }}:${{ steps.tag.outputs.IMAGE_TAG }}
-            ${{ env.ECR_REGISTRY }}/pulsenotify/${{ matrix.service }}:latest
-          cache-from: type=registry,ref=${{ env.ECR_REGISTRY }}/pulsenotify/${{ matrix.service }}:latest
-          cache-to: type=inline
-
-  # Update image tags in k8s manifests — triggers ArgoCD
-  update-manifests:
-    name: Update Manifests
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    permissions:
-      contents: write
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update image tags in Kubernetes manifests
-        env:
-          IMAGE_TAG: ${{ github.sha }}
-          ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-        run: |
-          for service in api ws-server worker frontend; do
-            MANIFEST="k8s/base/${service}-deployment.yaml"
-            if [ -f "$MANIFEST" ]; then
-              sed -i "s|${ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/${service}:.*|${ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/${service}:${IMAGE_TAG}|" $MANIFEST
-            fi
-          done
-
-      - name: Commit and push manifest updates
-        run: |
-          git config user.email "ci@pulsenotify.com"
-          git config user.name "PulseNotify CI"
-          git add k8s/
-          git diff --staged --quiet || git commit -m "ci: update image tags to ${{ github.sha }}"
-          git push
