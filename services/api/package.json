@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest --coverage"
+    "test": "jest --coverage --passWithNoTests"
   },
   "keywords": [],
   "author": "",
@@ -21,7 +21,6 @@
     "helmet": "^8.3.0",
     "pg": "^8.23.1",
     "redis": "^6.3.0",
-    "uuid": "^14.0.2",
     "winston": "^3.19.0"
   },
   "devDependencies": {

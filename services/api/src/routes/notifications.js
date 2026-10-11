@@ -1,5 +1,5 @@
 const express = require('express');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto');
 const { pool } = require('../db');
 const { getClient } = require('../redis');
 const { SQSClient, SendMessageCommand } = require('@aws-sdk/client-sqs');
@@ -47,7 +47,7 @@ router.post('/', authenticate, async (req, res) => {
     return res.status(400).json({ error: 'userId, title, and body are required' });
   }
 
-  const id = uuidv4();
+  const id = randomUUID();
   const notification = {
     id,
     tenantId: req.tenant.id,
