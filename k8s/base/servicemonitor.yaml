@@ -1,0 +1,54 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pulsenotify-api
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  namespaceSelector:
+    matchNames: [pulsenotify]
+  selector:
+    matchLabels:
+      app: api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: pulsenotify-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: pulsenotify
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            rate(http_requests_total{namespace="pulsenotify",status=~"5.."}[5m])
+            / rate(http_requests_total{namespace="pulsenotify"}[5m]) > 0.05
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PulseNotify API error rate above 5%"
+
+        - alert: PodCrashLooping
+          expr: increase(kube_pod_container_status_restarts_total{namespace="pulsenotify"}[15m]) > 3
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{ $labels.pod }} is crash looping"
+
+        - alert: SQSQueueDepthHigh
+          expr: aws_sqs_approximate_number_of_messages_visible > 1000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "SQS queue depth is high — worker may be falling behind"

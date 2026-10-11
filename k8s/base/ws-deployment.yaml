@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ws-server
+  namespace: pulsenotify
+  labels:
+    app: ws-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ws-server
+  template:
+    metadata:
+      labels:
+        app: ws-server
+    spec:
+      containers:
+        - name: ws-server
+          image: ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/ws-server:latest
+          ports:
+            - name: ws
+              containerPort: 3001
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+          envFrom:
+            - configMapRef:
+                name: pulsenotify-config
+          env:
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pulsenotify-secrets
+                  key: REDIS_URL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ws-server
+  namespace: pulsenotify
+spec:
+  selector:
+    app: ws-server
+  ports:
+    - name: ws
+      port: 80
+      targetPort: ws

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pulsenotify-config
+  namespace: pulsenotify
+data:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  AWS_REGION: "ap-south-1"
+  FROM_EMAIL: "notifications@yourdomain.com"
