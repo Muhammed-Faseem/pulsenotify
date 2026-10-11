@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: pulsenotify
+      POSTGRES_USER: pulsenotify
+      POSTGRES_PASSWORD: localpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulsenotify"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+
+  api:
+    build:
+      context: ./services/api
+      target: runtime
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://pulsenotify:localpassword@postgres:5432/pulsenotify
+      REDIS_URL: redis://redis:6379
+      SQS_QUEUE_URL: ${SQS_QUEUE_URL}
+      AWS_REGION: ap-south-1
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ws-server:
+    build:
+      context: ./services/ws-server
+      target: runtime
+    ports:
+      - "3001:3001"
+    environment:
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: debug
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./services/worker
+      target: runtime
+    environment:
+      DATABASE_URL: postgres://pulsenotify:localpassword@postgres:5432/pulsenotify
+      REDIS_URL: redis://redis:6379
+      SQS_QUEUE_URL: ${SQS_QUEUE_URL}
+      AWS_REGION: ap-south-1
+      FROM_EMAIL: notifications@yourdomain.com
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./services/frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+      - ws-server
+
+volumes:
+  postgres_data:

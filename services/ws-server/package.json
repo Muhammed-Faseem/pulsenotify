@@ -1,0 +1,19 @@
+{
+  "name": "ws-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^18.0.6",
+    "redis": "^6.3.0",
+    "uuid": "^14.0.2",
+    "winston": "^3.19.0",
+    "ws": "^8.22.0"
+  }
+}
