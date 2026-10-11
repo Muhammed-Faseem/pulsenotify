@@ -23,7 +23,7 @@ spec:
       serviceAccountName: api
       containers:
         - name: api
-          image: ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/api:latest
+          image: 967283278916.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/api:latest
           ports:
             - name: http
               containerPort: 3000
