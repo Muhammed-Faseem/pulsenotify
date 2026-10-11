@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: ws-server
-          image: 967283278916.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/ws-server:latest
+          image: 967283278916.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/ws-server:692cce20a25419f700317edee0e71f426815065a
           ports:
             - name: ws
               containerPort: 3001

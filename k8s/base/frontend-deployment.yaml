@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 967283278916.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/frontend:latest
+          image: 967283278916.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/frontend:692cce20a25419f700317edee0e71f426815065a
           ports:
             - name: http
               containerPort: 80

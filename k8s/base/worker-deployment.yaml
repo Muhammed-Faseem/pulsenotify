@@ -18,7 +18,7 @@ spec:
       serviceAccountName: worker
       containers:
         - name: worker
-          image: 967283278916.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/worker:latest
+          image: 967283278916.dkr.ecr.ap-south-1.amazonaws.com/pulsenotify/worker:692cce20a25419f700317edee0e71f426815065a
           resources:
             requests:
               memory: "128Mi"
